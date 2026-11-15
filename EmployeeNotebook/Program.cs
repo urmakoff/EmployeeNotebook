@@ -13,4 +13,4 @@ else if (args is ["--demo", "6-validation"])
 else if (args is ["--demo", "7"])
     StageDemos.Search();
 else
-    Console.WriteLine("АРМ «Записная книжка сотрудников» — этап 7. Проверки: --demo 4, 5, 6-pay, 6-validation, 7");
+    StageDemos.Preview();
