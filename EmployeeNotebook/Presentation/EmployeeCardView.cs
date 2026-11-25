@@ -12,6 +12,7 @@ public sealed class EmployeeCardView(IEmployeeService service)
 
     public void Show(Employee employee)
     {
+        var today = DateTime.Today;
         ConsoleUi.WriteColor($"КАРТОЧКА СОТРУДНИКА · ID {employee.Id}", ConsoleColor.Cyan);
         Console.WriteLine($" 1. Табельный номер:     {employee.TabNumber}");
         Console.WriteLine($" 2. СНИЛС:              {employee.Snils}");
@@ -25,6 +26,9 @@ public sealed class EmployeeCardView(IEmployeeService service)
         Console.WriteLine($"10. Опыт / проекты:     {employee.ExperienceProjects}");
         Console.WriteLine($"11. Статус:             {employee.Status}");
         Console.WriteLine($"12. Оклад / ставка:     {ConsoleUi.Money(employee.Salary)} руб. / {employee.Rate.ToString("0.##", ConsoleUi.Russian)}");
+        Console.WriteLine($"    Образование:        {ShowValue(employee.Education)}");
+        Console.WriteLine($"    Возраст, полных лет: {EmployeeDates.Age(employee, today)}");
+        Console.WriteLine($"    Стаж в организации, полных лет: {EmployeeDates.Tenure(employee, today)?.ToString() ?? "нет даты увольнения"}");
         ConsoleUi.WriteColor($"Итого к выплате (Оклад × Ставка): {ConsoleUi.Money(service.CalculatePay(employee.Salary, employee.Rate))} руб.",
             ConsoleColor.Green);
     }
@@ -37,7 +41,7 @@ public sealed class EmployeeCardView(IEmployeeService service)
             ConsoleUi.WriteColor(existing is null ? "НОВЫЙ СОТРУДНИК" : $"ИЗМЕНЕНИЕ КАРТОЧКИ · ID {existing.Id}", ConsoleColor.Cyan);
             Console.WriteLine(draft is null
                 ? "Введите данные по подсказкам. Отдел, статус и ставку можно оставить по умолчанию."
-                : "Enter — оставить значение, «-» — очистить контакты, навыки или проекты.");
+                : "Enter - оставить значение, «-» - очистить необязательное поле.");
             var employee = new Employee
             {
                 Id = existing?.Id ?? 0,
@@ -53,7 +57,8 @@ public sealed class EmployeeCardView(IEmployeeService service)
                 ExperienceProjects = Text("Опыт / проекты", draft?.ExperienceProjects, optional: true),
                 Status = ConsoleUi.Pick("Статус", Statuses, draft?.Status ?? "Работает"),
                 Salary = Number("Оклад, руб.", draft?.Salary),
-                Rate = Number("Ставка (от 0,1 до 2,0)", draft?.Rate ?? 1m)
+                Rate = Number("Ставка (от 0,1 до 2,0)", draft?.Rate ?? 1m),
+                Education = Text("Образование (необязательно)", draft?.Education, optional: true)
             };
             var result = service.Validate(employee);
             if (result.IsSuccess)
@@ -76,6 +81,8 @@ public sealed class EmployeeCardView(IEmployeeService service)
             draft = employee;
         }
     }
+
+    private static string ShowValue(string value) => value.Length == 0 ? "Не указано" : value;
 
     private static string Text(string label, string? current, bool optional = false)
     {

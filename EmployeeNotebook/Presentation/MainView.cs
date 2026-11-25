@@ -25,7 +25,8 @@ public sealed class MainView
             while (true)
             {
                 ShowDirectory();
-                Console.WriteLine("[1] Карточка по ID  [2] Добавить  [3] Удалить  [4] Поиск/Фильтр  [5] Сброс  [0] Выход");
+                Console.WriteLine("[1] Карточка  [2] Добавить  [3] Удалить");
+                Console.WriteLine("[4] Поиск и фильтры  [5] Сбросить фильтры  [6] Отчёт  [0] Выход");
                 switch (ConsoleUi.Read("Действие: "))
                 {
                     case "1": OpenCard(); break;
@@ -33,8 +34,9 @@ public sealed class MainView
                     case "3": DeleteCard(); break;
                     case "4": SetFilters(); break;
                     case "5": filter = new(null, null, null); break;
+                    case "6": SaveReport(); break;
                     case "0": Console.WriteLine("Выход из записной книжки."); return;
-                    default: ConsoleUi.WriteColor("Выберите действие от 0 до 5.", ConsoleColor.Red); break;
+                    default: ConsoleUi.WriteColor("Выберите действие от 0 до 6.", ConsoleColor.Red); break;
                 }
             }
         }
@@ -67,7 +69,10 @@ public sealed class MainView
         if (employee is null)
             return;
         card.Show(employee);
-        if (ConsoleUi.Read("[1] Изменить  [Enter] Назад: ") != "1")
+        var action = ConsoleUi.Read("[1] Изменить  [2] Выгрузить карточку  [Enter] Назад: ");
+        if (action == "2")
+            SaveHtml("Карточка.html", EmployeeReports.Card(employee, employeeService, DateTime.Today));
+        if (action != "1")
             return;
         var edited = card.ReadForm(employee);
         if (edited is null || !IsUnique(edited))
@@ -80,6 +85,32 @@ public sealed class MainView
         ConsoleUi.WriteColor("Изменения сохранены.", ConsoleColor.Green);
         card.Show(edited);
         ConsoleUi.Read("[Enter] К списку: ");
+    }
+
+    private void SaveReport()
+    {
+        var visible = searchService.Filter(repository.GetAll(), filter);
+        SaveHtml("Отчёт.html", EmployeeReports.Roster(visible, filter, DateTime.Today));
+    }
+
+    private static void SaveHtml(string fileName, string html)
+    {
+        try
+        {
+            var folder = Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "Отчёты"));
+            var path = Path.Combine(folder.FullName, fileName);
+            // Повторная выгрузка не затирает предыдущий отчёт.
+            for (var number = 2; File.Exists(path); number++)
+                path = Path.Combine(folder.FullName, $"{Path.GetFileNameWithoutExtension(fileName)} {number}.html");
+            using var file = new FileStream(path, FileMode.CreateNew, FileAccess.Write);
+            using var writer = new StreamWriter(file);
+            writer.Write(html);
+            Console.WriteLine($"Сохранено: {path}");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            ConsoleUi.WriteColor($"Не удалось сохранить отчёт: {error.Message}", ConsoleColor.Red);
+        }
     }
 
     private void AddCard()
@@ -125,7 +156,7 @@ public sealed class MainView
 
     private void SetFilters()
     {
-        var query = ConsoleUi.Read("Поиск по ФИО или табельному номеру (Enter — все): ");
+        var query = ConsoleUi.Read("Поиск по ФИО или табельному номеру (Enter - все): ");
         var department = ConsoleUi.Pick("Отдел", ["Все", .. EmployeeCardView.DepartmentOptions], "Все");
         var status = ConsoleUi.Pick("Статус", ["Все", .. EmployeeCardView.StatusOptions], "Все");
         filter = new(query.Length == 0 ? null : query, department, status);

@@ -18,7 +18,9 @@ public sealed class SqliteEmployeeRepository : IEmployeeRepository
             Pooling = false
         }.ToString();
         using var connection = Open();
+        using var transaction = connection.BeginTransaction(deferred: false);
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             CREATE TABLE IF NOT EXISTS Employees (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,10 +36,18 @@ public sealed class SqliteEmployeeRepository : IEmployeeRepository
                 ExperienceProjects TEXT,
                 Status TEXT NOT NULL,
                 Salary TEXT NOT NULL,
-                Rate TEXT NOT NULL
+                Rate TEXT NOT NULL,
+                Education TEXT NOT NULL DEFAULT ''
             );
             """;
         command.ExecuteNonQuery();
+        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Employees') WHERE name = 'Education' COLLATE NOCASE;";
+        if ((long)command.ExecuteScalar()! == 0)
+        {
+            command.CommandText = "ALTER TABLE Employees ADD COLUMN Education TEXT NOT NULL DEFAULT '';";
+            command.ExecuteNonQuery();
+        }
+        transaction.Commit();
     }
 
     public int Add(Employee employee)
@@ -46,9 +56,9 @@ public sealed class SqliteEmployeeRepository : IEmployeeRepository
         using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO Employees (TabNumber, Snils, BirthDate, EmploymentDate, FullName,
-                Department, Position, Contacts, Skills, ExperienceProjects, Status, Salary, Rate)
+                Department, Position, Contacts, Skills, ExperienceProjects, Status, Salary, Rate, Education)
             VALUES ($tab, $snils, $birth, $employment, $name,
-                $department, $position, $contacts, $skills, $projects, $status, $salary, $rate);
+                $department, $position, $contacts, $skills, $projects, $status, $salary, $rate, $education);
             SELECT last_insert_rowid();
             """;
         BindEmployee(command, employee);
@@ -85,7 +95,8 @@ public sealed class SqliteEmployeeRepository : IEmployeeRepository
             UPDATE Employees SET TabNumber = $tab, Snils = $snils, BirthDate = $birth,
                 EmploymentDate = $employment, FullName = $name, Department = $department,
                 Position = $position, Contacts = $contacts, Skills = $skills,
-                ExperienceProjects = $projects, Status = $status, Salary = $salary, Rate = $rate
+                ExperienceProjects = $projects, Status = $status, Salary = $salary, Rate = $rate,
+                Education = $education
             WHERE Id = $id;
             """;
         BindEmployee(command, employee);
@@ -103,7 +114,7 @@ public sealed class SqliteEmployeeRepository : IEmployeeRepository
     }
 
     private const string Columns = "Id, TabNumber, Snils, BirthDate, EmploymentDate, FullName, "
-        + "Department, Position, Contacts, Skills, ExperienceProjects, Status, Salary, Rate";
+        + "Department, Position, Contacts, Skills, ExperienceProjects, Status, Salary, Rate, Education";
 
     private SqliteConnection Open()
     {
@@ -132,6 +143,7 @@ public sealed class SqliteEmployeeRepository : IEmployeeRepository
         command.Parameters.AddWithValue("$contacts", employee.Contacts);
         command.Parameters.AddWithValue("$skills", employee.Skills);
         command.Parameters.AddWithValue("$projects", employee.ExperienceProjects);
+        command.Parameters.AddWithValue("$education", employee.Education);
         command.Parameters.AddWithValue("$status", employee.Status);
         // Храним десятичную запись в TEXT, чтобы SQLite не преобразовал её в REAL.
         command.Parameters.AddWithValue("$salary", employee.Salary.ToString(CultureInfo.InvariantCulture));
@@ -153,6 +165,7 @@ public sealed class SqliteEmployeeRepository : IEmployeeRepository
         ExperienceProjects = reader.IsDBNull(10) ? "" : reader.GetString(10),
         Status = reader.GetString(11),
         Salary = decimal.Parse(reader.GetString(12), CultureInfo.InvariantCulture),
-        Rate = decimal.Parse(reader.GetString(13), CultureInfo.InvariantCulture)
+        Rate = decimal.Parse(reader.GetString(13), CultureInfo.InvariantCulture),
+        Education = reader.GetString(14)
     };
 }

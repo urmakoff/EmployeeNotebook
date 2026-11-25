@@ -45,6 +45,7 @@ public static class SeedDataGenerator
         Salary = salary,
         Rate = rate,
         Contacts = $"employee{number:00}@example.invalid",
+        Education = number % 3 == 0 ? "Среднее профессиональное" : "Высшее",
         Skills = skills,
         ExperienceProjects = projects
     };

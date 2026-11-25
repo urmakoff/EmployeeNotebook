@@ -13,6 +13,7 @@ public sealed class Employee
     public string Contacts { get; set; } = "";
     public string Skills { get; set; } = "";
     public string ExperienceProjects { get; set; } = "";
+    public string Education { get; set; } = "";
     public string Status { get; set; } = "Работает";
     public decimal Salary { get; set; }
     public decimal Rate { get; set; } = 1m;

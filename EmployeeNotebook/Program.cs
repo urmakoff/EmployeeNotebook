@@ -26,6 +26,10 @@ internal static class Program
                     return RunNotebook(Path.Combine(AppContext.BaseDirectory, "employees.db"));
                 case ["--db", var path] when !string.IsNullOrWhiteSpace(path):
                     return RunNotebook(path);
+                case ["--web"]:
+                    return RunNotebook(Path.Combine(AppContext.BaseDirectory, "employees.db"), web: true);
+                case ["--web", "--db", var webPath] when !string.IsNullOrWhiteSpace(webPath):
+                    return RunNotebook(webPath, web: true);
                 default:
                     PrintUsage();
                     return 2;
@@ -39,7 +43,7 @@ internal static class Program
         }
     }
 
-    private static int RunNotebook(string databasePath)
+    private static int RunNotebook(string databasePath, bool web = false)
     {
         // Infrastructure: открыть локальное хранилище и заполнить новую базу примерами.
         var path = Path.GetFullPath(databasePath);
@@ -51,6 +55,12 @@ internal static class Program
         // Core задаёт контракты, Application реализует расчёт, валидацию и поиск.
         IEmployeeService employeeService = new EmployeeService();
         ISearchService searchService = new LinqSearchService();
+
+        if (web)
+        {
+            WebNotebook.Run(repository, employeeService, searchService);
+            return 0;
+        }
 
         // Presentation получает зависимости через конструктор и запускает меню.
         var mainView = new MainView(repository, employeeService, searchService);
@@ -77,6 +87,7 @@ internal static class Program
         Console.WriteLine("АРМ «Записная книжка сотрудников»");
         Console.WriteLine("  Без аргументов                        Открыть картотеку.");
         Console.WriteLine("  --db <путь>                           Использовать указанный файл SQLite.");
+        Console.WriteLine("  --web [--db <путь>]                  Открыть интерфейс по адресу http://127.0.0.1:5080.");
         Console.WriteLine("  --demo <4|5|6-pay|6-validation|7>      Запустить проверку этапа на вымышленных данных.");
     }
 }
