@@ -67,6 +67,10 @@ internal static class EmployeeReports
           table{border-collapse:collapse;width:100%} th,td{border:1px solid #aaa;padding:.45rem;text-align:left}
           th{background:#eee} .table{overflow:auto} label{display:block;margin:.45rem 0}
           input,select,button{font:inherit} input,select{max-width:100%;box-sizing:border-box}
+          .employee-form{max-width:36rem}
+          .employee-form label{display:grid;grid-template-columns:13rem minmax(0,1fr);gap:.25rem 1rem;align-items:center}
+          .employee-form label>input,.employee-form label>select{width:100%;min-width:0;min-height:2rem}
+          @media(max-width:34rem){.employee-form label{grid-template-columns:minmax(0,1fr)} }
           .actions{margin:.75rem 0} .actions a{margin-right:1rem}
           @media print{.actions{display:none} body{max-width:none} .table{overflow:visible} }
         </style></head><body><h1>{{H(title)}}</h1>{{body}}</body></html>

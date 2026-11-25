@@ -185,7 +185,7 @@ internal static class WebNotebook
             : "";
         return Page(id is null ? "Новый сотрудник" : "Изменение карточки", $$"""
             {{errorList}}
-            <form method="post" action="/employees/save/{{id}}">{{Token(token)}}
+            <form class="employee-form" method="post" action="/employees/save/{{id}}">{{Token(token)}}
             {{string.Concat(inputs)}}<button type="submit">Сохранить</button>
             <a href="{{(id is null ? "/" : $"/employees/{id}")}}">Отмена</a></form>
             """);
